@@ -9,3 +9,4 @@
 include("utils.jl")
 include("topologies.jl")
 include("builders.jl")
+include("qasm_parser.jl")

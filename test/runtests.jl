@@ -15,6 +15,8 @@ using Random
     include("test_noisechannels.jl")
 
     include("test_circuits.jl")
+    
+    include("test_qasm_parser.jl")
 
     include("test_cliffordgates.jl")
 

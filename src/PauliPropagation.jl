@@ -117,7 +117,9 @@ export
     rzlayer!,
     rxxlayer!,
     ryylayer!,
-    rzzlayer!
+    rzzlayer!,
+    parse_qasm,
+    parse_qasm_file
 
 
 include("Propagation/Propagation.jl")
