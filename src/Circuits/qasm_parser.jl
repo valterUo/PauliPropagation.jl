@@ -213,23 +213,64 @@ end
     _parse_parameter(param_str::AbstractString) -> Float64
 
 Parse a parameter string from OpenQASM.
-Supports numeric values and expressions involving π (pi).
+Supports numeric values and basic arithmetic expressions involving π (pi).
+For security, only allows a safe subset of mathematical operations.
 """
 function _parse_parameter(param_str::AbstractString)
     param_str = strip(String(param_str))
     
-    # Replace common patterns
+    # Replace pi with π for evaluation
     param_str = replace(param_str, "pi" => "π")
     
-    # Try to evaluate as Julia expression
+    # Try to parse as a simple number first (most common case)
     try
-        return eval(Meta.parse(param_str))
+        return parse(Float64, param_str)
     catch
-        # If that fails, try to parse as a simple number
-        try
-            return parse(Float64, param_str)
-        catch
-            error("Could not parse parameter: $param_str")
+        # Continue to safe expression parsing
+    end
+    
+    # For expressions, only allow safe mathematical operations
+    # This regex checks that the string only contains numbers, π, basic operators, and parentheses
+    if !occursin(r"^[\d\.\+\-\*/\(\)\s\u03C0eE]+$", param_str)
+        error("Parameter contains invalid characters: $param_str")
+    end
+    
+    # Parse and evaluate the expression safely using Base.Meta.parse
+    # Since we've validated the input, this is safe
+    try
+        expr = Meta.parse(param_str)
+        # Only allow specific expression types to be evaluated
+        if !_is_safe_math_expr(expr)
+            error("Parameter contains unsafe operations: $param_str")
+        end
+        return eval(expr)
+    catch e
+        error("Could not parse parameter: $param_str (error: $e)")
+    end
+end
+
+"""
+    _is_safe_math_expr(expr) -> Bool
+
+Check if an expression is safe to evaluate (only contains arithmetic operations and π).
+"""
+function _is_safe_math_expr(expr)
+    # Allow numbers and π directly
+    if isa(expr, Number) || expr == :π
+        return true
+    end
+    
+    # Allow basic arithmetic operations
+    if isa(expr, Expr)
+        if expr.head == :call
+            # Only allow +, -, *, / operators
+            op = expr.args[1]
+            if op in (:+, :-, :*, :/, :^)
+                # Recursively check all arguments
+                return all(_is_safe_math_expr(arg) for arg in expr.args[2:end])
+            end
         end
     end
+    
+    return false
 end
